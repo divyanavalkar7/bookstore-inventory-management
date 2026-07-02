@@ -1,6 +1,7 @@
 import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MATERIAL_MODULES } from '../material';
 import { InventoryService } from '../inventory.service';
 import { Book } from '../models';
@@ -8,7 +9,7 @@ import { Book } from '../models';
 @Component({
   selector: 'app-book-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, MATERIAL_MODULES],
+  imports: [CommonModule, FormsModule, MATERIAL_MODULES, RouterLink],
   templateUrl: './book-list.component.html'
 })
 export class BookListComponent {
@@ -34,7 +35,7 @@ export class BookListComponent {
     );
   });
 
-  constructor(public service: InventoryService) {}
+  constructor(public service: InventoryService) { }
 
   getAuthorName(authorId: number | string): string {
     const id = typeof authorId === 'string' ? parseInt(authorId, 10) : authorId;
@@ -60,8 +61,8 @@ export class BookListComponent {
     }
   }
 
-  adjustStock(isbn: string, amount: number): void {
-    this.service.adjustStock(isbn, amount);
+  adjustStock(bookId: number, amount: number): void {
+    this.service.adjustStock(bookId, amount);
   }
 
   deleteBook(isbn: string): void {

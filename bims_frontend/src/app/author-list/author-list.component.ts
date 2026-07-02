@@ -1,23 +1,19 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MATERIAL_MODULES } from '../material';
 import { InventoryService } from '../inventory.service';
 import { Author } from '../models';
+import { AddAuthorComponent } from './add-author.component';
 
 @Component({
   selector: 'app-author-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, MATERIAL_MODULES],
+  imports: [CommonModule, MATERIAL_MODULES, AddAuthorComponent],
   templateUrl: './author-list.component.html'
 })
 export class AuthorListComponent {
   isAuthorPanelOpen = signal<boolean>(false);
-  newAuthorForm = {
-    name: '',
-    bio: ''
-  };
 
   constructor(public service: InventoryService, private router: Router) {}
 
@@ -40,38 +36,16 @@ export class AuthorListComponent {
 
   toggleAuthorPanel(open: boolean): void {
     this.isAuthorPanelOpen.set(open);
-    if (open) {
-      this.newAuthorForm = {
-        name: '',
-        bio: ''
-      };
-    }
   }
 
   deleteAuthor(authorId: number): void {
-    if (confirm('Deleting this author will remove associated books (if any). Continue?')) {
-      this.service.deleteAuthor(authorId);
-    }
-  }
-
-  saveAuthor(event: Event): void {
-    event.preventDefault();
-    if (!this.newAuthorForm.name) {
-      alert('Please enter the author\'s name.');
+    const bookCount = this.getAuthorBookCount(authorId);
+    if (bookCount > 0) {
+      alert(`Cannot delete this author because they have ${bookCount} associated book(s) in the inventory.`);
       return;
     }
-
-    const nextId = this.service.authors().length > 0
-      ? Math.max(...this.service.authors().map(a => a.id)) + 1
-      : 1;
-
-    const newAuthor: Author = {
-      id: nextId,
-      name: this.newAuthorForm.name,
-      bio: this.newAuthorForm.bio
-    };
-
-    this.service.saveAuthor(newAuthor);
-    this.toggleAuthorPanel(false);
+    if (confirm('Are you sure you want to delete this author?')) {
+      this.service.deleteAuthor(authorId);
+    }
   }
 }

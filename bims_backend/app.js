@@ -7,14 +7,20 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// Import routers
-const authorRouter = require('./routes/authors');
-const bookRouter = require('./routes/books');
+// Import routes and middleware
+const routes = require('./routes');
+const errorHandler = require('./middleware/errorHandler');
 
-// Use routers
-app.use('/authors', authorRouter);
-app.use('/books', bookRouter);
+// Use routes
+app.use('/', routes);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Centralized Error Handling Middleware
+app.use(errorHandler);
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+module.exports = app;

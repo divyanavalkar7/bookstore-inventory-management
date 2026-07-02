@@ -50,16 +50,20 @@
               </div>
             </div>
           </td>
-          <td>{{ getAuthorName(book.authorId) }}</td>
+          <td>
+            <a [routerLink]="['/authors', book.authorId]" class="author-link">
+              {{ getAuthorName(book.authorId) }}
+            </a>
+          </td>
           <td><span class="price-text">${{ book.price.toFixed(2) }}</span></td>
           <td>
             <div style="display: flex; align-items: center; gap: 8px;">
               <span>{{ book.stock }}</span>
               <div style="display: flex; flex-direction: column;">
-                <button mat-icon-button style="width: 16px; height: 16px; min-width: 16px; padding: 0; line-height: 16px;" (click)="adjustStock(book.isbn, 1)">
+                <button mat-icon-button style="width: 16px; height: 16px; min-width: 16px; padding: 0; line-height: 16px;" (click)="adjustStock(book.id!, 1)">
                   <mat-icon style="font-size: 14px; width: 14px; height: 14px; line-height: 14px; color: #4f46e5;">arrow_drop_up</mat-icon>
                 </button>
-                <button mat-icon-button style="width: 16px; height: 16px; min-width: 16px; padding: 0; line-height: 16px;" (click)="adjustStock(book.isbn, -1)">
+                <button mat-icon-button style="width: 16px; height: 16px; min-width: 16px; padding: 0; line-height: 16px;" (click)="adjustStock(book.id!, -1)">
                   <mat-icon style="font-size: 14px; width: 14px; height: 14px; line-height: 14px; color: #ef4444;">arrow_drop_down</mat-icon>
                 </button>
               </div>

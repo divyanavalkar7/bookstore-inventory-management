@@ -886,3 +886,17 @@ app-sidebar {
   border-top: 1px solid var(--border-color);
 }
 
+.author-link {
+  color: #4f46e5;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+  cursor: pointer;
+}
+
+.author-link:hover {
+  color: #3730a3;
+  text-decoration: underline;
+}
+
+

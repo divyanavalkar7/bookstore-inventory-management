@@ -1,0 +1,26 @@
+<div class="sliding-panel-overlay" [class.active]="isOpen" (click)="onClose()"></div>
+<div class="sliding-panel" [class.active]="isOpen">
+  <div class="panel-header">
+    <h3>Add New Author</h3>
+    <button mat-icon-button (click)="onClose()" style="color: #64748b;">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <form (submit)="saveAuthor($event)" class="panel-form">
+    <div class="form-group">
+      <label class="required">Author Name</label>
+      <input type="text" class="premium-input" [(ngModel)]="newAuthorForm.name" name="name" required placeholder="e.g. Martin Fowler" />
+    </div>
+
+    <div class="form-group" style="margin-bottom: 24px;">
+      <label>Biography</label>
+      <textarea class="premium-input" [(ngModel)]="newAuthorForm.bio" name="bio" rows="4" placeholder="Enter short bio..."></textarea>
+    </div>
+
+    <div class="panel-actions">
+      <button type="button" class="btn-secondary" (click)="onClose()">Cancel</button>
+      <button type="submit" class="btn-primary">Add Author</button>
+    </div>
+  </form>
+</div>

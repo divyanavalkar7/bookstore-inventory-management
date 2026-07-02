@@ -37,29 +37,4 @@
 </div>
 
 <!-- Sliding Sidebar Form Panel (Add Author) -->
-<div class="sliding-panel-overlay" [class.active]="isAuthorPanelOpen()" (click)="toggleAuthorPanel(false)"></div>
-<div class="sliding-panel" [class.active]="isAuthorPanelOpen()">
-  <div class="panel-header">
-    <h3>Add New Author</h3>
-    <button mat-icon-button (click)="toggleAuthorPanel(false)" style="color: #64748b;">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
-
-  <form (submit)="saveAuthor($event)" class="panel-form">
-    <div class="form-group">
-      <label class="required">Author Name</label>
-      <input type="text" class="premium-input" [(ngModel)]="newAuthorForm.name" name="name" required placeholder="e.g. Martin Fowler" />
-    </div>
-
-    <div class="form-group" style="margin-bottom: 24px;">
-      <label>Biography</label>
-      <textarea class="premium-input" [(ngModel)]="newAuthorForm.bio" name="bio" rows="4" placeholder="Enter short bio..."></textarea>
-    </div>
-
-    <div class="panel-actions">
-      <button type="button" class="btn-secondary" (click)="toggleAuthorPanel(false)">Cancel</button>
-      <button type="submit" class="btn-primary">Add Author</button>
-    </div>
-  </form>
-</div>
+<app-add-author [isOpen]="isAuthorPanelOpen()" (closePanel)="toggleAuthorPanel(false)"></app-add-author>

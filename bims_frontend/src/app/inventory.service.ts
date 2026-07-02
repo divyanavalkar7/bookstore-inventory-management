@@ -125,28 +125,27 @@ export class InventoryService {
     }
   }
 
-  async adjustStock(isbn: string, amount: number): Promise<void> {
-    const book = this.books().find(b => b.isbn === isbn);
+  async adjustStock(bookId: number, amount: number): Promise<void> {
+    const book = this.books().find(b => b.id === bookId);
     if (!book) return;
-    const newStock = Math.max(0, book.stock + amount);
 
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const res = await fetch(`${this.API_BASE}/books/${isbn}/stock`, {
-        method: 'PUT',
+      const res = await fetch(`${this.API_BASE}/books/${bookId}/stock`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stock: newStock })
+        body: JSON.stringify({ change: amount })
       });
       if (res.ok) {
         await this.fetchBooksAndAuthors();
       } else {
-        this.updateLocalStock(isbn, newStock);
-        this.errorMessage.set(`Could not update stock on backend (status ${res.status}). Updated locally.`);
+        const errorData = await res.json().catch(() => ({}));
+        const errMsg = errorData.error?.message || errorData.error || `Server returned status ${res.status}`;
+        this.errorMessage.set(`Failed to adjust stock: ${errMsg}`);
       }
-    } catch (e) {
-      this.updateLocalStock(isbn, newStock);
-      this.errorMessage.set(`Failed to connect to backend to update stock. Updated locally.`);
+    } catch (e: any) {
+      this.errorMessage.set(`Failed to connect to backend: ${e.message}`);
     } finally {
       this.isLoading.set(false);
     }
@@ -210,8 +209,9 @@ export class InventoryService {
       if (res.ok) {
         await this.fetchBooksAndAuthors();
       } else {
-        this.books.update(allBooks => [...allBooks, newBook]);
-        this.errorMessage.set(`Could not save book to backend (status ${res.status}). Updated locally.`);
+        const errorData = await res.json().catch(() => ({}));
+        const errMsg = errorData.error?.message || errorData.error || `Server returned status ${res.status}`;
+        this.errorMessage.set(`Could not save book: ${errMsg}`);
       }
     } catch (e) {
       this.books.update(allBooks => [...allBooks, newBook]);
@@ -233,8 +233,9 @@ export class InventoryService {
       if (res.ok) {
         await this.fetchBooksAndAuthors();
       } else {
-        this.authors.update(allAuthors => [...allAuthors, newAuthor]);
-        this.errorMessage.set(`Could not save author to backend (status ${res.status}). Updated locally.`);
+        const errorData = await res.json().catch(() => ({}));
+        const errMsg = errorData.error?.message || errorData.error || `Server returned status ${res.status}`;
+        this.errorMessage.set(`Could not save author: ${errMsg}`);
       }
     } catch (e) {
       this.authors.update(allAuthors => [...allAuthors, newAuthor]);

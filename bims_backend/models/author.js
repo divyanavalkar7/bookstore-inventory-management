@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       Author.hasMany(models.Book, {
         foreignKey: 'authorId',
         as: 'books',
-        onDelete: 'CASCADE'
+        onDelete: 'RESTRICT'
       });
     }
   }
@@ -15,6 +15,9 @@ module.exports = (sequelize, DataTypes) => {
     name: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: {
+        msg: 'Author name must be unique'
+      },
       validate: {
         notNull: { msg: 'Author name is required' },
         notEmpty: { msg: 'Author name cannot be empty' }

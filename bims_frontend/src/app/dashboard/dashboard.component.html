@@ -60,7 +60,11 @@
             <span class="activity-bullet" [class.danger]="book.stock === 0" [class.warning]="book.stock > 0"></span>
             <div class="activity-info">
               <h4>{{ book.title }}</h4>
-              <p>ISBN: {{ book.isbn }} | Author: {{ getAuthorName(book.authorId) }}</p>
+              <p>ISBN: {{ book.isbn }} | Author: 
+                <a [routerLink]="['/authors', book.authorId]" class="author-link">
+                  {{ getAuthorName(book.authorId) }}
+                </a>
+              </p>
             </div>
           </div>
           <div>
