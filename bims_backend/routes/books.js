@@ -3,10 +3,10 @@ const router = express.Router();
 const { Book, Author } = require('../models');
 const { Op } = require('sequelize');
 
-// GET /books - List all books (with inStock and minPrice filters)
+// GET /books - List all books (with inStock, minPrice, and search filters)
 router.get('/', async (req, res, next) => {
   try {
-    const { inStock, minPrice } = req.query;
+    const { inStock, minPrice, search } = req.query;
     const where = {};
 
     if (inStock === 'true') {
@@ -15,8 +15,19 @@ router.get('/', async (req, res, next) => {
       where.stock = 0;
     }
 
-    if (minPrice !== undefined) {
-      where.price = { [Op.gte]: parseFloat(minPrice) };
+    if (minPrice !== undefined && minPrice !== '') {
+      const parsedPrice = parseFloat(minPrice);
+      if (!isNaN(parsedPrice)) {
+        where.price = { [Op.gte]: parsedPrice };
+      }
+    }
+
+    if (search !== undefined && search !== '') {
+      const searchPattern = `%${search.trim()}%`;
+      where[Op.or] = [
+        { title: { [Op.iLike]: searchPattern } },
+        { isbn: { [Op.iLike]: searchPattern } }
+      ];
     }
 
     const books = await Book.findAll({
@@ -97,6 +108,15 @@ router.patch('/:id/stock', async (req, res, next) => {
       err.field = 'change';
       throw err;
     }
+
+    const changeInt = parseInt(change, 10);
+    if (isNaN(changeInt)) {
+      const err = new Error('Stock increment must be a valid integer');
+      err.status = 400;
+      err.field = 'change';
+      throw err;
+    }
+
     const book = await Book.findByPk(req.params.id);
     if (!book) {
       const err = new Error('Book not found');
@@ -104,8 +124,15 @@ router.patch('/:id/stock', async (req, res, next) => {
       throw err;
     }
 
-    // Adjust stock by the signed delta
-    book.stock = book.stock + change;
+    // Adjust stock and validate boundary
+    if (book.stock + changeInt < 0) {
+      const err = new Error('Stock cannot go below zero');
+      err.status = 400;
+      err.field = 'stock';
+      throw err;
+    }
+
+    book.stock = book.stock + changeInt;
     await book.validate();
     await book.save();
     res.json(book);

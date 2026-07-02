@@ -25,16 +25,35 @@ export class BookListComponent {
     authorId: 0
   };
 
+  stockFilter = signal<'all' | 'inStock' | 'outOfStock'>('all');
+  minPriceFilter = signal<number | null>(null);
+
   filteredBooks = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    if (!query) {
-      return this.service.books();
+    let books = this.service.books();
+
+    // Stock Availability filter (local client filter)
+    const stock = this.stockFilter();
+    if (stock === 'inStock') {
+      books = books.filter(book => book.stock > 0);
+    } else if (stock === 'outOfStock') {
+      books = books.filter(book => book.stock === 0);
     }
-    return this.service.books().filter(book =>
-      book.title.toLowerCase().includes(query) ||
-      book.isbn.toLowerCase().includes(query)
-    );
+
+    return books;
   });
+
+  updateStockFilter(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    this.stockFilter.set(target.value as 'all' | 'inStock' | 'outOfStock');
+  }
+
+  updateMinPriceFilter(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const val = target.value ? parseFloat(target.value) : null;
+    const parsedVal = val && !isNaN(val) ? val : null;
+    this.minPriceFilter.set(parsedVal);
+    this.service.fetchBooksAndAuthors(parsedVal !== null ? parsedVal : undefined, this.searchQuery());
+  }
 
   constructor(public service: InventoryService) { }
 
@@ -46,7 +65,9 @@ export class BookListComponent {
 
   updateSearchQuery(event: Event): void {
     const target = event.target as HTMLInputElement;
-    this.searchQuery.set(target.value);
+    const query = target.value;
+    this.searchQuery.set(query);
+    this.service.fetchBooksAndAuthors(this.minPriceFilter() !== null ? (this.minPriceFilter() as number) : undefined, query);
   }
 
   toggleBookPanel(open: boolean): void {

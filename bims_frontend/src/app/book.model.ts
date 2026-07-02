@@ -1,3 +1,6 @@
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
 export interface Book {
   id?: number;
   title: string;
@@ -68,11 +71,7 @@ export namespace Book {
     };
   }
 
-  export async function adjustStock(bookId: number, stock: number, apiBase: string): Promise<Response> {
-    return fetch(`${apiBase}/books/${bookId}/stock`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ change: stock })
-    });
+  export function adjustStock(bookId: number, stock: number, apiBase: string, http: HttpClient): Observable<Book> {
+    return http.patch<Book>(`${apiBase}/books/${bookId}/stock`, { change: stock });
   }
 }

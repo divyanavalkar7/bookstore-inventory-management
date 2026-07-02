@@ -8,9 +8,13 @@ export interface Author {
 }
 
 export namespace Author {
-  export function validate(form: { name: string; bio?: string }): string | null {
+  export function validate(form: { name: string; bio?: string }, existingAuthors: Author[]): string | null {
     if (!form.name || !form.name.trim()) {
       return "Please enter the author's name.";
+    }
+    const nameExists = existingAuthors.some(a => a.name.toLowerCase().trim() === form.name.toLowerCase().trim());
+    if (nameExists) {
+      return "An author with this name already exists.";
     }
     return null;
   }

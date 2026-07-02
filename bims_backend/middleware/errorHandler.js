@@ -29,7 +29,6 @@ const errorHandler = (err, req, res, next) => {
   if (field !== undefined) {
     errorResponse.error.field = field;
   }
-
   res.status(status).json(errorResponse);
 };
 

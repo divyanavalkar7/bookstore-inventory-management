@@ -1,4 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { Author, Book } from './models';
 
 @Injectable({
@@ -38,7 +40,7 @@ export class InventoryService {
       .sort((a, b) => a.stock - b.stock)
   );
 
-  constructor() {
+  constructor(private http: HttpClient) {
     this.fetchBooksAndAuthors();
   }
 
@@ -47,36 +49,37 @@ export class InventoryService {
   }
 
   // Fetch initial data from backend API
-  async fetchBooksAndAuthors(): Promise<void> {
+  async fetchBooksAndAuthors(minPrice?: number, search?: string): Promise<void> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const booksRes = await fetch(`${this.API_BASE}/books`);
-      if (booksRes.ok) {
-        const booksData = await booksRes.json();
-        const parsedBooks = booksData.map((b: any) => ({
+      let booksUrl = `${this.API_BASE}/books`;
+      const params: string[] = [];
+      if (minPrice !== undefined && minPrice !== null) {
+        params.push(`minPrice=${minPrice}`);
+      }
+      if (search !== undefined && search !== null && search.trim() !== '') {
+        params.push(`search=${encodeURIComponent(search.trim())}`);
+      }
+      if (params.length > 0) {
+        booksUrl += `?${params.join('&')}`;
+      }
+      const booksData = await firstValueFrom(this.http.get<Book[]>(booksUrl));
+      const parsedBooks = booksData.map((b: Book) => ({
+        ...b,
+        price: typeof b.price === 'string' ? parseFloat(b.price) : b.price
+      }));
+      this.books.set(parsedBooks);
+
+      const authorsData = await firstValueFrom(this.http.get<Author[]>(`${this.API_BASE}/authors`));
+      const parsedAuthors = authorsData.map((author: Author) => ({
+        ...author,
+        books: author.books ? author.books.map((b: Book) => ({
           ...b,
           price: typeof b.price === 'string' ? parseFloat(b.price) : b.price
-        }));
-        this.books.set(parsedBooks);
-      } else {
-        throw new Error(`Failed to fetch books: status ${booksRes.status}`);
-      }
-
-      const authorsRes = await fetch(`${this.API_BASE}/authors`);
-      if (authorsRes.ok) {
-        const authorsData = await authorsRes.json();
-        const parsedAuthors = authorsData.map((author: any) => ({
-          ...author,
-          books: author.books ? author.books.map((b: any) => ({
-            ...b,
-            price: typeof b.price === 'string' ? parseFloat(b.price) : b.price
-          })) : []
-        }));
-        this.authors.set(parsedAuthors);
-      } else {
-        throw new Error(`Failed to fetch authors: status ${authorsRes.status}`);
-      }
+        })) : []
+      }));
+      this.authors.set(parsedAuthors);
     } catch (e) {
       console.warn('Backend server not reachable. Running in standalone mock mode.', e);
       this.errorMessage.set('Backend server not reachable. Running in standalone mock mode.');
@@ -102,21 +105,15 @@ export class InventoryService {
     }
 
     try {
-      const res = await fetch(`${this.API_BASE}/authors/${authorId}`);
-      if (res.ok) {
-        const remoteAuthor = await res.json();
-        if (remoteAuthor && remoteAuthor.books) {
-          remoteAuthor.books = remoteAuthor.books.map((b: any) => ({
-            ...b,
-            price: typeof b.price === 'string' ? parseFloat(b.price) : b.price
-          }));
-        }
-        this.selectedAuthor.set(remoteAuthor);
-      } else {
-        this.selectedAuthor.set(fallbackDetails);
-        this.errorMessage.set(`Could not fetch author details from API (status ${res.status}). Using local fallback.`);
+      const remoteAuthor = await firstValueFrom(this.http.get<Author>(`${this.API_BASE}/authors/${authorId}`));
+      if (remoteAuthor && remoteAuthor.books) {
+        remoteAuthor.books = remoteAuthor.books.map((b: Book) => ({
+          ...b,
+          price: typeof b.price === 'string' ? parseFloat(b.price) : b.price
+        }));
       }
-    } catch (e) {
+      this.selectedAuthor.set(remoteAuthor);
+    } catch (e: any) {
       console.warn(`Could not fetch author details from API. Using local fallback.`, e);
       this.selectedAuthor.set(fallbackDetails);
       this.errorMessage.set(`Could not fetch author details from API. Using local fallback.`);
@@ -136,20 +133,15 @@ export class InventoryService {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const res = await Book.adjustStock(bookId, stock, this.API_BASE);
-      if (res.ok) {
-        await this.fetchBooksAndAuthors();
-        const currentSelected = this.selectedAuthor();
-        if (currentSelected) {
-          await this.selectAuthor(currentSelected.id);
-        }
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        const errMsg = errorData.error?.message || errorData.error || `Server returned status ${res.status}`;
-        this.errorMessage.set(`Failed to adjust stock: ${errMsg}`);
+      await firstValueFrom(Book.adjustStock(bookId, stock, this.API_BASE, this.http));
+      await this.fetchBooksAndAuthors();
+      const currentSelected = this.selectedAuthor();
+      if (currentSelected) {
+        await this.selectAuthor(currentSelected.id);
       }
     } catch (e: any) {
-      this.errorMessage.set(`Failed to connect to backend: ${e.message}`);
+      const errMsg = e.error?.error?.message || e.error?.error || e.message || 'Server error';
+      this.errorMessage.set(`Failed to adjust stock: ${errMsg}`);
     } finally {
       this.isLoading.set(false);
     }
@@ -165,20 +157,15 @@ export class InventoryService {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const res = await fetch(`${this.API_BASE}/books/${isbn}`, { method: 'DELETE' });
-      if (res.ok) {
-        await this.fetchBooksAndAuthors();
-        const currentSelected = this.selectedAuthor();
-        if (currentSelected) {
-          await this.selectAuthor(currentSelected.id);
-        }
-      } else {
-        this.books.update(allBooks => allBooks.filter(book => book.isbn !== isbn));
-        this.errorMessage.set(`Could not delete book from backend (status ${res.status}). Updated locally.`);
+      await firstValueFrom(this.http.delete<void>(`${this.API_BASE}/books/${isbn}`));
+      await this.fetchBooksAndAuthors();
+      const currentSelected = this.selectedAuthor();
+      if (currentSelected) {
+        await this.selectAuthor(currentSelected.id);
       }
-    } catch (e) {
+    } catch (e: any) {
       this.books.update(allBooks => allBooks.filter(book => book.isbn !== isbn));
-      this.errorMessage.set(`Failed to connect to backend to delete book. Updated locally.`);
+      this.errorMessage.set(`Could not delete book from backend (status ${e.status || 'unknown'}). Updated locally.`);
     } finally {
       this.isLoading.set(false);
     }
@@ -188,18 +175,12 @@ export class InventoryService {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const res = await fetch(`${this.API_BASE}/authors/${authorId}`, { method: 'DELETE' });
-      if (res.ok) {
-        await this.fetchBooksAndAuthors();
-      } else {
-        this.authors.update(allAuthors => allAuthors.filter(a => a.id !== authorId));
-        this.books.update(allBooks => allBooks.filter(b => b.authorId !== authorId));
-        this.errorMessage.set(`Could not delete author from backend (status ${res.status}). Updated locally.`);
-      }
-    } catch (e) {
+      await firstValueFrom(this.http.delete<void>(`${this.API_BASE}/authors/${authorId}`));
+      await this.fetchBooksAndAuthors();
+    } catch (e: any) {
       this.authors.update(allAuthors => allAuthors.filter(a => a.id !== authorId));
       this.books.update(allBooks => allBooks.filter(b => b.authorId !== authorId));
-      this.errorMessage.set(`Failed to connect to backend to delete author. Updated locally.`);
+      this.errorMessage.set(`Could not delete author from backend (status ${e.status || 'unknown'}). Updated locally.`);
     } finally {
       this.isLoading.set(false);
     }
@@ -209,25 +190,21 @@ export class InventoryService {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const res = await fetch(`${this.API_BASE}/books`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newBook)
-      });
-      if (res.ok) {
-        await this.fetchBooksAndAuthors();
-        const currentSelected = this.selectedAuthor();
-        if (currentSelected) {
-          await this.selectAuthor(currentSelected.id);
-        }
+      await firstValueFrom(this.http.post<Book>(`${this.API_BASE}/books`, newBook));
+      await this.fetchBooksAndAuthors();
+      const currentSelected = this.selectedAuthor();
+      if (currentSelected) {
+        await this.selectAuthor(currentSelected.id);
+      }
+    } catch (e: any) {
+      if (e.status === 0 || !e.status) {
+        // Network/Connection error - run in mock/local mode
+        this.books.update(allBooks => [...allBooks, newBook]);
+        this.errorMessage.set(`Failed to connect to backend to save book. Updated locally.`);
       } else {
-        const errorData = await res.json().catch(() => ({}));
-        const errMsg = errorData.error?.message || errorData.error || `Server returned status ${res.status}`;
+        const errMsg = e.error?.error?.message || e.error?.error || e.message || 'Server error';
         this.errorMessage.set(`Could not save book: ${errMsg}`);
       }
-    } catch (e) {
-      this.books.update(allBooks => [...allBooks, newBook]);
-      this.errorMessage.set(`Failed to connect to backend to save book. Updated locally.`);
     } finally {
       this.isLoading.set(false);
     }
@@ -251,7 +228,7 @@ export class InventoryService {
   }
 
   validateAndSaveAuthor(form: { name: string; bio?: string }): string | null {
-    const error = Author.validate(form);
+    const error = Author.validate(form, this.authors());
     if (error) {
       return error;
     }
@@ -265,21 +242,19 @@ export class InventoryService {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const res = await fetch(`${this.API_BASE}/authors`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newAuthor.name, bio: newAuthor.bio })
-      });
-      if (res.ok) {
-        await this.fetchBooksAndAuthors();
+      await firstValueFrom(
+        this.http.post<Author>(`${this.API_BASE}/authors`, { name: newAuthor.name, bio: newAuthor.bio })
+      );
+      await this.fetchBooksAndAuthors();
+    } catch (e: any) {
+      if (e.status === 0 || !e.status) {
+        // Network/Connection error - run in mock/local mode
+        this.authors.update(allAuthors => [...allAuthors, newAuthor]);
+        this.errorMessage.set(`Failed to connect to backend to save author. Updated locally.`);
       } else {
-        const errorData = await res.json().catch(() => ({}));
-        const errMsg = errorData.error?.message || errorData.error || `Server returned status ${res.status}`;
+        const errMsg = e.error?.error?.message || e.error?.error || e.message || 'Server error';
         this.errorMessage.set(`Could not save author: ${errMsg}`);
       }
-    } catch (e) {
-      this.authors.update(allAuthors => [...allAuthors, newAuthor]);
-      this.errorMessage.set(`Failed to connect to backend to save author. Updated locally.`);
     } finally {
       this.isLoading.set(false);
     }

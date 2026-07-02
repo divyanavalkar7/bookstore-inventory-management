@@ -6,13 +6,31 @@
 </div>
 
 <div class="inventory-actions">
-  <div class="search-field-container">
-    <div class="search-input-wrapper">
-      <mat-icon class="search-icon">search</mat-icon>
-      <input type="text" class="premium-search-input" placeholder="Search by title or ISBN..." [value]="searchQuery()"
-        (input)="updateSearchQuery($event)" />
+  <div class="filters-container">
+    <div class="search-field-container">
+      <div class="search-input-wrapper">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input type="text" class="premium-search-input" placeholder="Search by title or ISBN..." [value]="searchQuery()"
+          (input)="updateSearchQuery($event)" />
+      </div>
+    </div>
+
+    <!-- Stock Availability Filter -->
+    <div class="filter-select-wrapper">
+      <select class="premium-filter-select" (change)="updateStockFilter($event)">
+        <option value="all">All Stocks</option>
+        <option value="inStock">In Stock</option>
+        <option value="outOfStock">Out of Stock</option>
+      </select>
+    </div>
+
+    <!-- Min Price Filter -->
+    <div class="filter-price-wrapper">
+      <input type="number" class="premium-filter-price" placeholder="Min Price ($)..."
+        (input)="updateMinPriceFilter($event)" min="0" step="0.01" />
     </div>
   </div>
+
   <button class="btn-floating" (click)="toggleBookPanel(true)">
     <mat-icon>add</mat-icon>
     Add New Book

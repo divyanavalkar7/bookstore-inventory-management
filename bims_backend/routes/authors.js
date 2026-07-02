@@ -35,7 +35,31 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     const { name, bio } = req.body;
-    const author = Author.build({ name: name ? name.trim() : name, bio });
+    
+    if (!name || !name.trim()) {
+      const err = new Error('Author name cannot be empty');
+      err.status = 400;
+      err.field = 'name';
+      throw err;
+    }
+
+    const { Op } = require('sequelize');
+    const existingAuthor = await Author.findOne({
+      where: {
+        name: {
+          [Op.iLike]: name.trim()
+        }
+      }
+    });
+
+    if (existingAuthor) {
+      const err = new Error('Author name must be unique');
+      err.status = 400;
+      err.field = 'name';
+      throw err;
+    }
+
+    const author = Author.build({ name: name.trim(), bio });
     await author.validate();
     await author.save();
     res.status(201).json(author);
