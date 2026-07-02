@@ -4,13 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MATERIAL_MODULES } from '../material';
 import { InventoryService } from '../inventory.service';
-import { Book } from '../models';
+
 
 @Component({
   selector: 'app-book-list',
   standalone: true,
   imports: [CommonModule, FormsModule, MATERIAL_MODULES, RouterLink],
-  templateUrl: './book-list.component.html'
+  templateUrl: './book-list.component.html',
+  styleUrl: './book-list.component.css'
 })
 export class BookListComponent {
   searchQuery = signal<string>('');
@@ -73,26 +74,11 @@ export class BookListComponent {
 
   saveBook(event: Event): void {
     event.preventDefault();
-    if (!this.newBookForm.title || !this.newBookForm.isbn || !this.newBookForm.authorId || this.newBookForm.price <= 0) {
-      alert('Please fill out all required fields with valid values.');
+    const errorMessage = this.service.validateAndSaveBook(this.newBookForm);
+    if (errorMessage) {
+      alert(errorMessage);
       return;
     }
-
-    const isbnExists = this.service.books().some(b => b.isbn === this.newBookForm.isbn);
-    if (isbnExists) {
-      alert('A book with this ISBN already exists in the inventory.');
-      return;
-    }
-
-    const newBook: Book = {
-      title: this.newBookForm.title,
-      isbn: this.newBookForm.isbn,
-      price: parseFloat(this.newBookForm.price.toString()),
-      stock: parseInt(this.newBookForm.stock.toString(), 10),
-      authorId: parseInt(this.newBookForm.authorId.toString(), 10)
-    };
-
-    this.service.saveBook(newBook);
     this.toggleBookPanel(false);
   }
 }

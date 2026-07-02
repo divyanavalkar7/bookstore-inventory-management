@@ -33,7 +33,7 @@ router.get('/', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     const { title, isbn, price, stock, authorId } = req.body;
-    
+
     // REQ-4.2 - Must validate that authorId references an existing author
     const author = await Author.findByPk(authorId);
     if (!author) {
@@ -92,7 +92,7 @@ router.patch('/:id/stock', async (req, res, next) => {
   try {
     const { change } = req.body;
     if (change === undefined) {
-      const err = new Error('Change is required');
+      const err = new Error('Stock increment is required');
       err.status = 400;
       err.field = 'change';
       throw err;
@@ -103,7 +103,7 @@ router.patch('/:id/stock', async (req, res, next) => {
       err.status = 404;
       throw err;
     }
-    
+
     // Adjust stock by the signed delta
     book.stock = book.stock + change;
     await book.validate();

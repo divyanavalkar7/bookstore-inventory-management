@@ -1,14 +1,18 @@
-<aside class="premium-sidebar">
+<aside class="premium-sidebar" [class.collapsed]="isCollapsed">
+  <button class="toggle-btn" (click)="toggleCollapse()" title="Toggle Sidebar">
+    {{ isCollapsed ? '»' : '«' }}
+  </button>
+
   <div class="sidebar-menu">
-    <a class="menu-item" routerLink="/dashboard" routerLinkActive="active">
+    <a class="menu-item" routerLink="/dashboard" routerLinkActive="active" title="Dashboard">
       <mat-icon>dashboard</mat-icon>
       <span>Dashboard</span>
     </a>
-    <a class="menu-item" routerLink="/authors" routerLinkActive="active">
+    <a class="menu-item" routerLink="/authors" routerLinkActive="active" title="Authors Registry">
       <mat-icon>people</mat-icon>
       <span>Authors Registry</span>
     </a>
-    <a class="menu-item" routerLink="/books" routerLinkActive="active">
+    <a class="menu-item" routerLink="/books" routerLinkActive="active" title="Books Inventory">
       <mat-icon>library_books</mat-icon>
       <span>Books Inventory</span>
     </a>

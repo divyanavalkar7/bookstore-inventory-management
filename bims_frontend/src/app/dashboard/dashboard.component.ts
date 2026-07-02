@@ -9,7 +9,8 @@ import { StockDistributionComponent } from './stock-distribution.component';
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, MATERIAL_MODULES, StockDistributionComponent, RouterLink],
-  templateUrl: './dashboard.component.html'
+  templateUrl: './dashboard.component.html',
+  styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent {
   constructor(public service: InventoryService) {}

@@ -10,7 +10,8 @@ import { AddAuthorComponent } from './add-author.component';
   selector: 'app-author-list',
   standalone: true,
   imports: [CommonModule, MATERIAL_MODULES, AddAuthorComponent],
-  templateUrl: './author-list.component.html'
+  templateUrl: './author-list.component.html',
+  styleUrl: './author-list.component.css'
 })
 export class AuthorListComponent {
   isAuthorPanelOpen = signal<boolean>(false);

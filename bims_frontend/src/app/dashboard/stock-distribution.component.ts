@@ -7,7 +7,8 @@ import { InventoryService } from '../inventory.service';
   selector: 'app-stock-distribution',
   standalone: true,
   imports: [CommonModule, MATERIAL_MODULES],
-  templateUrl: './stock-distribution.component.html'
+  templateUrl: './stock-distribution.component.html',
+  styleUrl: './stock-distribution.component.css'
 })
 export class StockDistributionComponent {
   constructor(public service: InventoryService) {}

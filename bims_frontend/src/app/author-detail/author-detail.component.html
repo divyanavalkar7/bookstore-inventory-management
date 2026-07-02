@@ -1,6 +1,7 @@
 <div class="view-header">
   <div class="view-title-section" style="display: flex; align-items: center; gap: 16px;">
-    <a class="action-btn" routerLink="/authors" matTooltip="Back to Registry" style="border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: inherit; background: rgba(0,0,0,0.04);">
+    <a class="action-btn" routerLink="/authors" matTooltip="Back to Registry"
+      style="border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: inherit; background: rgba(0,0,0,0.04);">
       <mat-icon>arrow_back</mat-icon>
     </a>
     <div>
@@ -8,80 +9,157 @@
       <p>Detailed profile and associated bibliography.</p>
     </div>
   </div>
+  @if (service.selectedAuthor()) {
+  <button class="btn-floating" (click)="toggleBookPanel(true)">
+    <mat-icon>add</mat-icon>
+    <span>Add Book</span>
+  </button>
+  }
 </div>
 
 @if (service.selectedAuthor()) {
-  <div style="display: flex; flex-direction: column; gap: 24px;">
-    <!-- Author Info -->
-    <div class="dashboard-card">
-      <div class="author-profile">
-        <div class="author-avatar-placeholder" style="width: 60px; height: 60px; font-size: 24px; border-radius: 16px;">
-          {{ getInitials(service.selectedAuthor()?.name || '') }}
-        </div>
-        <div class="author-name-section">
-          <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a;">{{ service.selectedAuthor()?.name }}</h3>
-          <p>Author ID: #{{ service.selectedAuthor()?.id }}</p>
-        </div>
+<div style="display: flex; flex-direction: column; gap: 24px;">
+  <!-- Author Info -->
+  <div class="dashboard-card">
+    <div class="author-profile">
+      <div class="author-avatar-placeholder" style="width: 60px; height: 60px; font-size: 24px; border-radius: 16px;">
+        {{ getInitials(service.selectedAuthor()?.name || '') }}
       </div>
-      <p style="font-size: 15px; line-height: 1.6; color: var(--text-main); margin: 16px 0 0 0; padding-top: 16px; border-top: 1px solid #f1f5f9;">
-        {{ service.selectedAuthor()?.bio || 'No biography details provided.' }}
-      </p>
+      <div class="author-name-section">
+        <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a;">{{ service.selectedAuthor()?.name }}
+        </h3>
+        <p>Author ID: #{{ service.selectedAuthor()?.id }}</p>
+      </div>
+    </div>
+    <p
+      style="font-size: 15px; line-height: 1.6; color: var(--text-main); margin: 16px 0 0 0; padding-top: 16px; border-top: 1px solid #f1f5f9;">
+      {{ service.selectedAuthor()?.bio || 'No biography details provided.' }}
+    </p>
+  </div>
+
+  <!-- Associated Books Table -->
+  <div class="dashboard-card">
+    <h3
+      style="margin: 0 0 20px 0; font-size: 18px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+      <mat-icon style="color: #4f46e5;">library_books</mat-icon>
+      Books by this Author
+    </h3>
+    <div class="premium-table-card">
+      <table class="premium-table">
+        <thead>
+          <tr>
+            <th>Title / ISBN</th>
+            <th>Price</th>
+            <th style="width: 120px;">Stock</th>
+            <th>Status</th>
+            <th style="width: 80px; text-align: center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (book of service.selectedAuthor()?.books || []; track book.isbn) {
+          <tr>
+            <td>
+              <div class="book-title-cell">
+                <div class="book-icon-avatar">
+                  <mat-icon>book</mat-icon>
+                </div>
+                <div class="book-meta">
+                  <span class="book-title-text">{{ book.title }}</span>
+                  <span class="book-isbn-text">{{ book.isbn }}</span>
+                </div>
+              </div>
+            </td>
+            <td><span class="price-text">${{ book.price.toFixed(2) }}</span></td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span>{{ book.stock }}</span>
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                  <button type="button" style="background: none; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 16px; height: 16px;"
+                    (click)="adjustStock(book.id!, 1)">
+                    <mat-icon
+                      style="font-size: 16px; width: 16px; height: 16px; line-height: 16px; color: #4f46e5;">arrow_drop_up</mat-icon>
+                  </button>
+                  <button type="button" style="background: none; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 16px; height: 16px;"
+                    (click)="adjustStock(book.id!, -1)">
+                    <mat-icon
+                      style="font-size: 16px; width: 16px; height: 16px; line-height: 16px; color: #ef4444;">arrow_drop_down</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="status-badge" [class.in-stock]="book.stock > 10"
+                [class.low-stock]="book.stock <= 10 && book.stock > 0" [class.out-of-stock]="book.stock === 0">
+                {{ book.stock > 10 ? 'In Stock' : (book.stock === 0 ? 'Out of Stock' : 'Low Stock') }}
+              </span>
+            </td>
+            <td style="text-align: center;">
+              <div class="action-buttons" style="justify-content: center;">
+                <button class="action-btn delete" (click)="deleteBook(book.isbn)" matTooltip="Delete Book">
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px; line-height: 18px;">delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 48px; color: var(--text-muted);">
+              <mat-icon
+                style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; color: #cbd5e1;">menu_book</mat-icon>
+              <p style="margin: 0; font-size: 16px; font-weight: 500;">No books registered for this author.</p>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+} @else if (service.isLoadingAuthorDetails()) {
+<div style="text-align: center; padding: 48px;">
+  <mat-spinner diameter="40" style="margin: 0 auto;"></mat-spinner>
+  <p style="margin-top: 16px; color: var(--text-muted);">Loading author bibliography details...</p>
+</div>
+}
+
+<!-- Sliding Sidebar Form Panel (Add Book) -->
+<div class="sliding-panel-overlay" [class.active]="isBookPanelOpen()" (click)="toggleBookPanel(false)"></div>
+<div class="sliding-panel" [class.active]="isBookPanelOpen()">
+  <div class="panel-header">
+    <h3>Add New Book for {{ service.selectedAuthor()?.name }}</h3>
+    <button mat-icon-button (click)="toggleBookPanel(false)" style="color: #64748b;">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <form (submit)="saveBook($event)" class="panel-form">
+    <div class="form-group">
+      <label class="required">Book Title</label>
+      <input type="text" class="premium-input" [(ngModel)]="newBookForm.title" name="title" required
+        placeholder="Enter book title" />
     </div>
 
-    <!-- Associated Books Table -->
-    <div class="dashboard-card">
-      <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-        <mat-icon style="color: #4f46e5;">library_books</mat-icon>
-        Books by this Author
-      </h3>
-      <div class="premium-table-card">
-        <table class="premium-table">
-          <thead>
-            <tr>
-              <th>Title / ISBN</th>
-              <th>Price</th>
-              <th>Stock</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (book of service.selectedAuthor()?.books || []; track book.isbn) {
-              <tr>
-                <td>
-                  <div class="book-title-cell">
-                    <div class="book-icon-avatar">
-                      <mat-icon>book</mat-icon>
-                    </div>
-                    <div class="book-meta">
-                      <span class="book-title-text">{{ book.title }}</span>
-                      <span class="book-isbn-text">{{ book.isbn }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td><span class="price-text">${{ book.price.toFixed(2) }}</span></td>
-                <td>{{ book.stock }}</td>
-                <td>
-                  <span class="status-badge" [class.in-stock]="book.stock > 10" [class.low-stock]="book.stock <= 10 && book.stock > 0" [class.out-of-stock]="book.stock === 0">
-                    {{ book.stock > 10 ? 'In Stock' : (book.stock === 0 ? 'Out of Stock' : 'Low Stock') }}
-                  </span>
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="4" style="text-align: center; padding: 48px; color: var(--text-muted);">
-                  <mat-icon style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; color: #cbd5e1;">menu_book</mat-icon>
-                  <p style="margin: 0; font-size: 16px; font-weight: 500;">No books registered for this author.</p>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+    <div class="form-group">
+      <label class="required">ISBN</label>
+      <input type="text" class="premium-input" [(ngModel)]="newBookForm.isbn" name="isbn" required
+        placeholder="978-..." />
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+      <div class="form-group">
+        <label class="required">Price ($)</label>
+        <input type="number" step="0.01" class="premium-input" [(ngModel)]="newBookForm.price" name="price" required
+          min="0.01" />
+      </div>
+      <div class="form-group">
+        <label class="required">Stock Quantity</label>
+        <input type="number" class="premium-input" [(ngModel)]="newBookForm.stock" name="stock" required min="0" />
       </div>
     </div>
-  </div>
-} @else if (service.isLoadingAuthorDetails()) {
-  <div style="text-align: center; padding: 48px;">
-    <mat-spinner diameter="40" style="margin: 0 auto;"></mat-spinner>
-    <p style="margin-top: 16px; color: var(--text-muted);">Loading author bibliography details...</p>
-  </div>
-}
+
+    <div class="panel-actions">
+      <button type="button" class="btn-secondary" (click)="toggleBookPanel(false)">Cancel</button>
+      <button type="submit" class="btn-primary">Add Book</button>
+    </div>
+  </form>
+</div>

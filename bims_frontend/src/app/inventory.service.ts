@@ -125,20 +125,24 @@ export class InventoryService {
     }
   }
 
-  async adjustStock(bookId: number, amount: number): Promise<void> {
+  async adjustStock(bookId: number, stock: number): Promise<void> {
     const book = this.books().find(b => b.id === bookId);
     if (!book) return;
+    if (book.stock + stock < 0) {
+      this.errorMessage.set('Failed to adjust stock: Stock cannot go below zero');
+      return;
+    }
 
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const res = await fetch(`${this.API_BASE}/books/${bookId}/stock`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ change: amount })
-      });
+      const res = await Book.adjustStock(bookId, stock, this.API_BASE);
       if (res.ok) {
         await this.fetchBooksAndAuthors();
+        const currentSelected = this.selectedAuthor();
+        if (currentSelected) {
+          await this.selectAuthor(currentSelected.id);
+        }
       } else {
         const errorData = await res.json().catch(() => ({}));
         const errMsg = errorData.error?.message || errorData.error || `Server returned status ${res.status}`;
@@ -164,6 +168,10 @@ export class InventoryService {
       const res = await fetch(`${this.API_BASE}/books/${isbn}`, { method: 'DELETE' });
       if (res.ok) {
         await this.fetchBooksAndAuthors();
+        const currentSelected = this.selectedAuthor();
+        if (currentSelected) {
+          await this.selectAuthor(currentSelected.id);
+        }
       } else {
         this.books.update(allBooks => allBooks.filter(book => book.isbn !== isbn));
         this.errorMessage.set(`Could not delete book from backend (status ${res.status}). Updated locally.`);
@@ -208,6 +216,10 @@ export class InventoryService {
       });
       if (res.ok) {
         await this.fetchBooksAndAuthors();
+        const currentSelected = this.selectedAuthor();
+        if (currentSelected) {
+          await this.selectAuthor(currentSelected.id);
+        }
       } else {
         const errorData = await res.json().catch(() => ({}));
         const errMsg = errorData.error?.message || errorData.error || `Server returned status ${res.status}`;
@@ -219,6 +231,34 @@ export class InventoryService {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  validateAndSaveBook(form: {
+    title: string;
+    isbn: string;
+    price: number | string;
+    stock: number | string;
+    authorId: number | string;
+  }): string | null {
+    const error = Book.validate(form, this.books());
+    if (error) {
+      return error;
+    }
+
+    const newBook = Book.fromForm(form);
+    this.saveBook(newBook);
+    return null;
+  }
+
+  validateAndSaveAuthor(form: { name: string; bio?: string }): string | null {
+    const error = Author.validate(form);
+    if (error) {
+      return error;
+    }
+
+    const newAuthor = Author.fromForm(form, this.authors());
+    this.saveAuthor(newAuthor);
+    return null;
   }
 
   async saveAuthor(newAuthor: Author): Promise<void> {
