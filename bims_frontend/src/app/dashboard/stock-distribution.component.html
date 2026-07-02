@@ -1,0 +1,37 @@
+<div class="dashboard-card">
+  <h3>
+    <mat-icon style="color: #4f46e5;">donut_large</mat-icon>
+    Stock Level Distribution
+  </h3>
+  <div class="stock-status-container">
+    <div class="stock-progress-row">
+      <div class="stock-progress-label">
+        <span>Well Stocked (> 10 units)</span>
+        <span>{{ service.wellStockedCount() }} Titles</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill success" [style.width.%]="(service.wellStockedCount() / (service.books().length || 1)) * 100"></div>
+      </div>
+    </div>
+
+    <div class="stock-progress-row">
+      <div class="stock-progress-label">
+        <span>Low Stock (1 - 10 units)</span>
+        <span>{{ service.lowStockCount() }} Titles</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill warning" [style.width.%]="(service.lowStockCount() / (service.books().length || 1)) * 100"></div>
+      </div>
+    </div>
+
+    <div class="stock-progress-row">
+      <div class="stock-progress-label">
+        <span>Out of Stock (0 units)</span>
+        <span>{{ service.outOfStockCount() }} Titles</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill danger" [style.width.%]="(service.outOfStockCount() / (service.books().length || 1)) * 100"></div>
+      </div>
+    </div>
+  </div>
+</div>

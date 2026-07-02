@@ -1,0 +1,246 @@
+import { Injectable, signal, computed } from '@angular/core';
+import { Author, Book } from './models';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class InventoryService {
+  private readonly API_BASE = 'http://localhost:3000';
+
+  // State Signals
+  readonly books = signal<Book[]>([]);
+  readonly authors = signal<Author[]>([]);
+  readonly selectedAuthor = signal<Author | null>(null);
+  readonly isLoadingAuthorDetails = signal<boolean>(false);
+  readonly isLoading = signal<boolean>(false);
+  readonly errorMessage = signal<string | null>(null);
+
+  // Computed Values for dashboard statistics
+  readonly totalValue = computed(() =>
+    this.books().reduce((acc, book) => acc + (book.price * book.stock), 0)
+  );
+
+  readonly outOfStockCount = computed(() =>
+    this.books().filter(book => book.stock === 0).length
+  );
+
+  readonly lowStockCount = computed(() =>
+    this.books().filter(book => book.stock > 0 && book.stock <= 10).length
+  );
+
+  readonly wellStockedCount = computed(() =>
+    this.books().filter(book => book.stock > 10).length
+  );
+
+  readonly criticalBooks = computed(() =>
+    this.books()
+      .filter(book => book.stock <= 5)
+      .sort((a, b) => a.stock - b.stock)
+  );
+
+  constructor() {
+    this.fetchBooksAndAuthors();
+  }
+
+  clearError(): void {
+    this.errorMessage.set(null);
+  }
+
+  // Fetch initial data from backend API
+  async fetchBooksAndAuthors(): Promise<void> {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    try {
+      const booksRes = await fetch(`${this.API_BASE}/books`);
+      if (booksRes.ok) {
+        const booksData = await booksRes.json();
+        const parsedBooks = booksData.map((b: any) => ({
+          ...b,
+          price: typeof b.price === 'string' ? parseFloat(b.price) : b.price
+        }));
+        this.books.set(parsedBooks);
+      } else {
+        throw new Error(`Failed to fetch books: status ${booksRes.status}`);
+      }
+
+      const authorsRes = await fetch(`${this.API_BASE}/authors`);
+      if (authorsRes.ok) {
+        const authorsData = await authorsRes.json();
+        const parsedAuthors = authorsData.map((author: any) => ({
+          ...author,
+          books: author.books ? author.books.map((b: any) => ({
+            ...b,
+            price: typeof b.price === 'string' ? parseFloat(b.price) : b.price
+          })) : []
+        }));
+        this.authors.set(parsedAuthors);
+      } else {
+        throw new Error(`Failed to fetch authors: status ${authorsRes.status}`);
+      }
+    } catch (e) {
+      console.warn('Backend server not reachable. Running in standalone mock mode.', e);
+      this.errorMessage.set('Backend server not reachable. Running in standalone mock mode.');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  // Fetch detailed author profile with associated books (GET /authors/:id)
+  async selectAuthor(authorId: number): Promise<void> {
+    this.isLoadingAuthorDetails.set(true);
+    this.selectedAuthor.set(null);
+    this.errorMessage.set(null);
+
+    // Initial fallback data from local signals
+    const localAuthor = this.authors().find(a => a.id === authorId);
+    let fallbackDetails: Author | null = null;
+    if (localAuthor) {
+      fallbackDetails = {
+        ...localAuthor,
+        books: this.books().filter(b => b.authorId === authorId)
+      };
+    }
+
+    try {
+      const res = await fetch(`${this.API_BASE}/authors/${authorId}`);
+      if (res.ok) {
+        const remoteAuthor = await res.json();
+        if (remoteAuthor && remoteAuthor.books) {
+          remoteAuthor.books = remoteAuthor.books.map((b: any) => ({
+            ...b,
+            price: typeof b.price === 'string' ? parseFloat(b.price) : b.price
+          }));
+        }
+        this.selectedAuthor.set(remoteAuthor);
+      } else {
+        this.selectedAuthor.set(fallbackDetails);
+        this.errorMessage.set(`Could not fetch author details from API (status ${res.status}). Using local fallback.`);
+      }
+    } catch (e) {
+      console.warn(`Could not fetch author details from API. Using local fallback.`, e);
+      this.selectedAuthor.set(fallbackDetails);
+      this.errorMessage.set(`Could not fetch author details from API. Using local fallback.`);
+    } finally {
+      this.isLoadingAuthorDetails.set(false);
+    }
+  }
+
+  async adjustStock(isbn: string, amount: number): Promise<void> {
+    const book = this.books().find(b => b.isbn === isbn);
+    if (!book) return;
+    const newStock = Math.max(0, book.stock + amount);
+
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    try {
+      const res = await fetch(`${this.API_BASE}/books/${isbn}/stock`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stock: newStock })
+      });
+      if (res.ok) {
+        await this.fetchBooksAndAuthors();
+      } else {
+        this.updateLocalStock(isbn, newStock);
+        this.errorMessage.set(`Could not update stock on backend (status ${res.status}). Updated locally.`);
+      }
+    } catch (e) {
+      this.updateLocalStock(isbn, newStock);
+      this.errorMessage.set(`Failed to connect to backend to update stock. Updated locally.`);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  private updateLocalStock(isbn: string, newStock: number): void {
+    this.books.update(allBooks =>
+      allBooks.map(b => b.isbn === isbn ? { ...b, stock: newStock } : b)
+    );
+  }
+
+  async deleteBook(isbn: string): Promise<void> {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    try {
+      const res = await fetch(`${this.API_BASE}/books/${isbn}`, { method: 'DELETE' });
+      if (res.ok) {
+        await this.fetchBooksAndAuthors();
+      } else {
+        this.books.update(allBooks => allBooks.filter(book => book.isbn !== isbn));
+        this.errorMessage.set(`Could not delete book from backend (status ${res.status}). Updated locally.`);
+      }
+    } catch (e) {
+      this.books.update(allBooks => allBooks.filter(book => book.isbn !== isbn));
+      this.errorMessage.set(`Failed to connect to backend to delete book. Updated locally.`);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  async deleteAuthor(authorId: number): Promise<void> {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    try {
+      const res = await fetch(`${this.API_BASE}/authors/${authorId}`, { method: 'DELETE' });
+      if (res.ok) {
+        await this.fetchBooksAndAuthors();
+      } else {
+        this.authors.update(allAuthors => allAuthors.filter(a => a.id !== authorId));
+        this.books.update(allBooks => allBooks.filter(b => b.authorId !== authorId));
+        this.errorMessage.set(`Could not delete author from backend (status ${res.status}). Updated locally.`);
+      }
+    } catch (e) {
+      this.authors.update(allAuthors => allAuthors.filter(a => a.id !== authorId));
+      this.books.update(allBooks => allBooks.filter(b => b.authorId !== authorId));
+      this.errorMessage.set(`Failed to connect to backend to delete author. Updated locally.`);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  async saveBook(newBook: Book): Promise<void> {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    try {
+      const res = await fetch(`${this.API_BASE}/books`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newBook)
+      });
+      if (res.ok) {
+        await this.fetchBooksAndAuthors();
+      } else {
+        this.books.update(allBooks => [...allBooks, newBook]);
+        this.errorMessage.set(`Could not save book to backend (status ${res.status}). Updated locally.`);
+      }
+    } catch (e) {
+      this.books.update(allBooks => [...allBooks, newBook]);
+      this.errorMessage.set(`Failed to connect to backend to save book. Updated locally.`);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  async saveAuthor(newAuthor: Author): Promise<void> {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    try {
+      const res = await fetch(`${this.API_BASE}/authors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newAuthor.name, bio: newAuthor.bio })
+      });
+      if (res.ok) {
+        await this.fetchBooksAndAuthors();
+      } else {
+        this.authors.update(allAuthors => [...allAuthors, newAuthor]);
+        this.errorMessage.set(`Could not save author to backend (status ${res.status}). Updated locally.`);
+      }
+    } catch (e) {
+      this.authors.update(allAuthors => [...allAuthors, newAuthor]);
+      this.errorMessage.set(`Failed to connect to backend to save author. Updated locally.`);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+}

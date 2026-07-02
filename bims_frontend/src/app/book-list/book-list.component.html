@@ -1,0 +1,143 @@
+<div class="view-header">
+  <div class="view-title-section">
+    <h2>Books Inventory</h2>
+    <p>Search, update, and manage your bookstore titles.</p>
+  </div>
+</div>
+
+<div class="inventory-actions">
+  <div class="search-field-container">
+    <div class="search-input-wrapper">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input 
+        type="text" 
+        class="premium-search-input" 
+        placeholder="Search by title or ISBN..." 
+        [value]="searchQuery()"
+        (input)="updateSearchQuery($event)" />
+    </div>
+  </div>
+  <button class="btn-floating" (click)="toggleBookPanel(true)">
+    <mat-icon>add</mat-icon>
+    Add New Book
+  </button>
+</div>
+
+<!-- Inventory Table Card -->
+<div class="premium-table-card">
+  <table class="premium-table">
+    <thead>
+      <tr>
+        <th>Title / ISBN</th>
+        <th>Author</th>
+        <th>Price</th>
+        <th>Stock</th>
+        <th>Status</th>
+        <th style="width: 100px;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (book of filteredBooks(); track book.isbn) {
+        <tr>
+          <td>
+            <div class="book-title-cell">
+              <div class="book-icon-avatar">
+                <mat-icon>book</mat-icon>
+              </div>
+              <div class="book-meta">
+                <span class="book-title-text">{{ book.title }}</span>
+                <span class="book-isbn-text">{{ book.isbn }}</span>
+              </div>
+            </div>
+          </td>
+          <td>{{ getAuthorName(book.authorId) }}</td>
+          <td><span class="price-text">${{ book.price.toFixed(2) }}</span></td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span>{{ book.stock }}</span>
+              <div style="display: flex; flex-direction: column;">
+                <button mat-icon-button style="width: 16px; height: 16px; min-width: 16px; padding: 0; line-height: 16px;" (click)="adjustStock(book.isbn, 1)">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px; line-height: 14px; color: #4f46e5;">arrow_drop_up</mat-icon>
+                </button>
+                <button mat-icon-button style="width: 16px; height: 16px; min-width: 16px; padding: 0; line-height: 16px;" (click)="adjustStock(book.isbn, -1)">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px; line-height: 14px; color: #ef4444;">arrow_drop_down</mat-icon>
+                </button>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="status-badge" [class.in-stock]="book.stock > 10" [class.low-stock]="book.stock <= 10 && book.stock > 0" [class.out-of-stock]="book.stock === 0">
+              {{ book.stock > 10 ? 'In Stock' : (book.stock === 0 ? 'Out of Stock' : 'Low Stock') }}
+            </span>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="action-btn delete" (click)="deleteBook(book.isbn)" matTooltip="Delete Book">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px; line-height: 18px;">delete</mat-icon>
+              </button>
+            </div>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 48px; color: var(--text-muted);">
+            <mat-icon style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; color: #cbd5e1;">search_off</mat-icon>
+            <p style="margin: 0; font-size: 16px; font-weight: 500;">No books matched your search.</p>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- Sliding Sidebar Form Panel (Add Book) -->
+<div class="sliding-panel-overlay" [class.active]="isBookPanelOpen()" (click)="toggleBookPanel(false)"></div>
+<div class="sliding-panel" [class.active]="isBookPanelOpen()">
+  <div class="panel-header">
+    <h3>Add New Book</h3>
+    <button mat-icon-button (click)="toggleBookPanel(false)" style="color: #64748b;">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <form (submit)="saveBook($event)" class="panel-form">
+    <div class="form-group">
+      <label class="required">Book Title</label>
+      <input type="text" class="premium-input" [(ngModel)]="newBookForm.title" name="title" required placeholder="Enter book title" />
+    </div>
+
+    <div class="form-group">
+      <label class="required">ISBN</label>
+      <input type="text" class="premium-input" [(ngModel)]="newBookForm.isbn" name="isbn" required placeholder="978-..." />
+    </div>
+
+    <div class="form-group mb-0" style="margin-bottom: 16px;">
+      <label class="required">Author</label>
+      <div class="custom-select-wrapper">
+        <select class="premium-input custom-select" [(ngModel)]="newBookForm.authorId" name="authorId" required>
+          <option value="0" disabled>Select an author</option>
+          @for (author of service.authors(); track author.id) {
+            <option [value]="author.id">{{ author.name }}</option>
+          }
+        </select>
+        <mat-icon class="select-chevron">keyboard_arrow_down</mat-icon>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+      <div class="form-group">
+        <label class="required">Price ($)</label>
+        <input type="number" step="0.01" class="premium-input" [(ngModel)]="newBookForm.price" name="price" required min="0.01" />
+      </div>
+      <div class="form-group">
+        <label class="required">Stock Quantity</label>
+        <input type="number" class="premium-input" [(ngModel)]="newBookForm.stock" name="stock" required min="0" />
+      </div>
+    </div>
+
+    <div class="panel-actions">
+      <button type="button" class="btn-secondary" (click)="toggleBookPanel(false)">Cancel</button>
+      <button type="submit" class="btn-primary">Add Book</button>
+    </div>
+  </form>
+</div>

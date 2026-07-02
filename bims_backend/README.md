@@ -102,3 +102,5 @@ Start the application using Node:
 ```bash
 node app.js
 ```
+
+npm install express cors

@@ -61,4 +61,5 @@ For more information on using the Angular CLI, including detailed command refere
 ##Angular material 
 
 ng add @angular/material
+npm install @angular/animations --legacy-peer-deps
 
