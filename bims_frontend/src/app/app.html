@@ -1,0 +1,478 @@
+<div class="app-container">
+  <!-- Top Navigation Header -->
+  <header class="premium-navbar">
+    <div class="brand-section">
+      <div class="brand-icon">
+        <mat-icon>menu_book</mat-icon>
+      </div>
+      <span class="brand-name">Book Store Inventory Management</span>
+    </div>
+    <div class="nav-actions">
+      <button mat-icon-button matTooltip="Notifications">
+        <mat-icon matBadge="3" matBadgeColor="warn">notifications</mat-icon>
+      </button>
+      <button mat-icon-button matTooltip="Quick Settings">
+        <mat-icon>settings</mat-icon>
+      </button>
+      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop" 
+           alt="User Profile" 
+           class="user-avatar"
+           matTooltip="divyanavalkar7 (Admin)" />
+    </div>
+  </header>
+
+  <!-- Sidebar & Main Content Wrapper -->
+  <div class="main-wrapper">
+    <!-- Sidebar Navigation -->
+    <aside class="premium-sidebar">
+      <div class="sidebar-menu">
+        <a class="menu-item" [class.active]="currentView() === 'dashboard'" (click)="setView('dashboard')">
+          <mat-icon>dashboard</mat-icon>
+          <span>Dashboard</span>
+        </a>
+        <a class="menu-item" [class.active]="currentView() === 'books'" (click)="setView('books')">
+          <mat-icon>library_books</mat-icon>
+          <span>Books Inventory</span>
+        </a>
+        <a class="menu-item" [class.active]="currentView() === 'authors'" (click)="setView('authors')">
+          <mat-icon>people</mat-icon>
+          <span>Authors Registry</span>
+        </a>
+      </div>
+      <div class="sidebar-footer">
+        <p>BIMS v1.0.0</p>
+        <p>&copy; 2026 Bookstore Inc.</p>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+      <!-- DASHBOARD VIEW -->
+      @if (currentView() === 'dashboard') {
+        <div class="view-header">
+          <div class="view-title-section">
+            <h2>Inventory Dashboard</h2>
+            <p>Overview of the current bookstore inventory health and metrics.</p>
+          </div>
+        </div>
+
+        <!-- Metrics Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-info">
+              <h3>Total Titles</h3>
+              <p class="stat-value">{{ books().length }}</p>
+            </div>
+            <div class="stat-icon-wrapper blue">
+              <mat-icon>book</mat-icon>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <h3>Total Inventory Value</h3>
+              <p class="stat-value">${{ totalValue().toFixed(2) }}</p>
+            </div>
+            <div class="stat-icon-wrapper emerald">
+              <mat-icon>attach_money</mat-icon>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <h3>Out of Stock</h3>
+              <p class="stat-value">{{ outOfStockCount() }}</p>
+            </div>
+            <div class="stat-icon-wrapper rose">
+              <mat-icon>warning</mat-icon>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <h3>Registered Authors</h3>
+              <p class="stat-value">{{ authors().length }}</p>
+            </div>
+            <div class="stat-icon-wrapper amber">
+              <mat-icon>people_outline</mat-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="dashboard-details-grid">
+          <!-- Critical Alerts -->
+          <div class="dashboard-card">
+            <h3>
+              <mat-icon style="color: #ef4444;">error_outline</mat-icon>
+              Critical Stock Alerts
+            </h3>
+            <div class="activity-list">
+              @for (book of criticalBooks(); track book.isbn) {
+                <div class="activity-item">
+                  <div class="activity-details">
+                    <span class="activity-bullet" [class.danger]="book.stock === 0" [class.warning]="book.stock > 0"></span>
+                    <div class="activity-info">
+                      <h4>{{ book.title }}</h4>
+                      <p>ISBN: {{ book.isbn }} | Author: {{ getAuthorName(book.authorId) }}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <span class="status-badge" [class.out-of-stock]="book.stock === 0" [class.low-stock]="book.stock > 0">
+                      {{ book.stock === 0 ? 'Out of Stock' : book.stock + ' Remaining' }}
+                    </span>
+                  </div>
+                </div>
+              } @empty {
+                <p style="color: var(--text-muted); font-size: 14px;">All items are well stocked! 🎉</p>
+              }
+            </div>
+          </div>
+
+          <!-- Stock Distribution / Health -->
+          <div class="dashboard-card">
+            <h3>
+              <mat-icon style="color: #4f46e5;">donut_large</mat-icon>
+              Stock Level Distribution
+            </h3>
+            <div class="stock-status-container">
+              <div class="stock-progress-row">
+                <div class="stock-progress-label">
+                  <span>Well Stocked (> 10 units)</span>
+                  <span>{{ wellStockedCount() }} Titles</span>
+                </div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill success" [style.width.%]="(wellStockedCount() / books().length) * 100"></div>
+                </div>
+              </div>
+
+              <div class="stock-progress-row">
+                <div class="stock-progress-label">
+                  <span>Low Stock (1 - 10 units)</span>
+                  <span>{{ lowStockCount() }} Titles</span>
+                </div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill warning" [style.width.%]="(lowStockCount() / books().length) * 100"></div>
+                </div>
+              </div>
+
+              <div class="stock-progress-row">
+                <div class="stock-progress-label">
+                  <span>Out of Stock (0 units)</span>
+                  <span>{{ outOfStockCount() }} Titles</span>
+                </div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill danger" [style.width.%]="(outOfStockCount() / books().length) * 100"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- BOOKS INVENTORY VIEW -->
+      @if (currentView() === 'books') {
+        <div class="view-header">
+          <div class="view-title-section">
+            <h2>Books Inventory</h2>
+            <p>Search, update, and manage your bookstore titles.</p>
+          </div>
+        </div>
+
+        <div class="inventory-actions">
+          <div class="search-field-container">
+            <div class="search-input-wrapper">
+              <mat-icon class="search-icon">search</mat-icon>
+              <input 
+                type="text" 
+                class="premium-search-input" 
+                placeholder="Search by title or ISBN..." 
+                [value]="searchQuery()"
+                (input)="updateSearchQuery($event)" />
+            </div>
+          </div>
+          <button class="btn-floating" (click)="toggleBookPanel(true)">
+            <mat-icon>add</mat-icon>
+            Add New Book
+          </button>
+        </div>
+
+        <!-- Inventory Table Card -->
+        <div class="premium-table-card">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>Title / ISBN</th>
+                <th>Author</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Status</th>
+                <th style="width: 100px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (book of filteredBooks(); track book.isbn) {
+                <tr>
+                  <td>
+                    <div class="book-title-cell">
+                      <div class="book-icon-avatar">
+                        <mat-icon>book</mat-icon>
+                      </div>
+                      <div class="book-meta">
+                        <span class="book-title-text">{{ book.title }}</span>
+                        <span class="book-isbn-text">{{ book.isbn }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ getAuthorName(book.authorId) }}</td>
+                  <td><span class="price-text">${{ book.price.toFixed(2) }}</span></td>
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span>{{ book.stock }}</span>
+                      <div style="display: flex; flex-direction: column;">
+                        <button mat-icon-button style="width: 16px; height: 16px; min-width: 16px; padding: 0; line-height: 16px;" (click)="adjustStock(book.isbn, 1)">
+                          <mat-icon style="font-size: 14px; width: 14px; height: 14px; line-height: 14px; color: #4f46e5;">arrow_drop_up</mat-icon>
+                        </button>
+                        <button mat-icon-button style="width: 16px; height: 16px; min-width: 16px; padding: 0; line-height: 16px;" (click)="adjustStock(book.isbn, -1)">
+                          <mat-icon style="font-size: 14px; width: 14px; height: 14px; line-height: 14px; color: #ef4444;">arrow_drop_down</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="status-badge" [class.in-stock]="book.stock > 10" [class.low-stock]="book.stock <= 10 && book.stock > 0" [class.out-of-stock]="book.stock === 0">
+                      {{ book.stock > 10 ? 'In Stock' : (book.stock === 0 ? 'Out of Stock' : 'Low Stock') }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="action-btn delete" (click)="deleteBook(book.isbn)" matTooltip="Delete Book">
+                        <mat-icon style="font-size: 18px; width: 18px; height: 18px; line-height: 18px;">delete</mat-icon>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 48px; color: var(--text-muted);">
+                    <mat-icon style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; color: #cbd5e1;">search_off</mat-icon>
+                    <p style="margin: 0; font-size: 16px; font-weight: 500;">No books matched your search.</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- AUTHORS REGISTRY VIEW -->
+      @if (currentView() === 'authors') {
+        @if (selectedAuthor()) {
+          <!-- Author Detail View -->
+          <div class="view-header">
+            <div class="view-title-section" style="display: flex; align-items: center; gap: 16px;">
+              <button class="action-btn" (click)="closeAuthorDetail()" matTooltip="Back to Registry" style="border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+              <div>
+                <h2>{{ selectedAuthor()?.name }}</h2>
+                <p>Detailed profile and associated bibliography.</p>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Author Info -->
+            <div class="dashboard-card">
+              <div class="author-profile">
+                <div class="author-avatar-placeholder" style="width: 60px; height: 60px; font-size: 24px; border-radius: 16px;">
+                  {{ getInitials(selectedAuthor()?.name || '') }}
+                </div>
+                <div class="author-name-section">
+                  <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a;">{{ selectedAuthor()?.name }}</h3>
+                  <p>Author ID: #{{ selectedAuthor()?.id }}</p>
+                </div>
+              </div>
+              <p style="font-size: 15px; line-height: 1.6; color: var(--text-main); margin: 16px 0 0 0; padding-top: 16px; border-top: 1px solid #f1f5f9;">
+                {{ selectedAuthor()?.bio || 'No biography details provided.' }}
+              </p>
+            </div>
+
+            <!-- Associated Books Table -->
+            <div class="dashboard-card">
+              <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                <mat-icon style="color: #4f46e5;">library_books</mat-icon>
+                Books by this Author
+              </h3>
+              <div class="premium-table-card">
+                <table class="premium-table">
+                  <thead>
+                    <tr>
+                      <th>Title / ISBN</th>
+                      <th>Price</th>
+                      <th>Stock</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (book of selectedAuthor()?.books || []; track book.isbn) {
+                      <tr>
+                        <td>
+                          <div class="book-title-cell">
+                            <div class="book-icon-avatar">
+                              <mat-icon>book</mat-icon>
+                            </div>
+                            <div class="book-meta">
+                              <span class="book-title-text">{{ book.title }}</span>
+                              <span class="book-isbn-text">{{ book.isbn }}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td><span class="price-text">${{ book.price }}</span></td>
+                        <td>{{ book.stock }}</td>
+                        <td>
+                          <span class="status-badge" [class.in-stock]="book.stock > 10" [class.low-stock]="book.stock <= 10 && book.stock > 0" [class.out-of-stock]="book.stock === 0">
+                            {{ book.stock > 10 ? 'In Stock' : (book.stock === 0 ? 'Out of Stock' : 'Low Stock') }}
+                          </span>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="4" style="text-align: center; padding: 48px; color: var(--text-muted);">
+                          <mat-icon style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; color: #cbd5e1;">menu_book</mat-icon>
+                          <p style="margin: 0; font-size: 16px; font-weight: 500;">No books registered for this author.</p>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <!-- Authors List Grid -->
+          <div class="view-header">
+            <div class="view-title-section">
+              <h2>Authors Registry</h2>
+              <p>Manage list of authors and display their bios.</p>
+            </div>
+            <button class="btn-floating" (click)="toggleAuthorPanel(true)">
+              <mat-icon>add</mat-icon>
+              Add New Author
+            </button>
+          </div>
+
+          <div class="authors-grid">
+            @for (author of authors(); track author.id) {
+              <div class="author-card" style="cursor: pointer;" (click)="selectAuthor(author.id)">
+                <div>
+                  <div class="author-profile">
+                    <div class="author-avatar-placeholder">
+                      {{ getInitials(author.name) }}
+                    </div>
+                    <div class="author-name-section">
+                      <h4>{{ author.name }}</h4>
+                      <p>Author ID: #{{ author.id }}</p>
+                    </div>
+                  </div>
+                  <p class="author-bio">{{ author.bio || 'No biography details provided.' }}</p>
+                </div>
+                <div class="author-stats" (click)="$event.stopPropagation()">
+                  <span class="author-stat-badge">
+                    {{ getAuthorBookCount(author.id) }} Published Book(s)
+                  </span>
+                  <button mat-icon-button (click)="deleteAuthor(author.id)" class="action-btn delete" matTooltip="Remove Author">
+                    <mat-icon style="font-size: 18px; width: 18px; height: 18px; line-height: 18px;">delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </main>
+  </div>
+
+  <!-- ADD BOOK SLIDE PANEL -->
+  @if (isBookPanelOpen()) {
+    <div class="slide-panel-overlay" (click)="toggleBookPanel(false)">
+      <div class="slide-panel" (click)="$event.stopPropagation()">
+        <div class="slide-panel-header">
+          <h3>Add New Book</h3>
+          <button class="slide-panel-close" (click)="toggleBookPanel(false)">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <div class="slide-panel-content">
+          <form (submit)="saveBook($event)">
+            <div class="form-group">
+              <label for="bookTitle">Book Title *</label>
+              <input type="text" id="bookTitle" name="title" [(ngModel)]="newBookForm.title" class="premium-input" placeholder="e.g. Design Patterns" required />
+            </div>
+            
+            <div class="form-group">
+              <label for="bookIsbn">ISBN Code *</label>
+              <input type="text" id="bookIsbn" name="isbn" [(ngModel)]="newBookForm.isbn" class="premium-input" placeholder="e.g. 978-0201633610" required />
+            </div>
+
+            <div class="form-group">
+              <label for="bookAuthor">Author *</label>
+              <select id="bookAuthor" name="authorId" [(ngModel)]="newBookForm.authorId" class="premium-select" required>
+                <option [value]="0" disabled selected>Select an Author</option>
+                @for (author of authors(); track author.id) {
+                  <option [value]="author.id">{{ author.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="bookPrice">Price ($) *</label>
+                <input type="number" id="bookPrice" name="price" [(ngModel)]="newBookForm.price" class="premium-input" placeholder="e.g. 29.99" step="0.01" min="0.01" required />
+              </div>
+              
+              <div class="form-group">
+                <label for="bookStock">Initial Stock *</label>
+                <input type="number" id="bookStock" name="stock" [(ngModel)]="newBookForm.stock" class="premium-input" placeholder="e.g. 10" min="0" required />
+              </div>
+            </div>
+
+            <div class="slide-panel-footer">
+              <button type="button" class="btn-secondary" (click)="toggleBookPanel(false)">Cancel</button>
+              <button type="submit" class="btn-primary">Add to Inventory</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ADD AUTHOR SLIDE PANEL -->
+  @if (isAuthorPanelOpen()) {
+    <div class="slide-panel-overlay" (click)="toggleAuthorPanel(false)">
+      <div class="slide-panel" (click)="$event.stopPropagation()">
+        <div class="slide-panel-header">
+          <h3>Add New Author</h3>
+          <button class="slide-panel-close" (click)="toggleAuthorPanel(false)">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <div class="slide-panel-content">
+          <form (submit)="saveAuthor($event)">
+            <div class="form-group">
+              <label for="authorName">Author Name *</label>
+              <input type="text" id="authorName" name="name" [(ngModel)]="newAuthorForm.name" class="premium-input" placeholder="e.g. Erich Gamma" required />
+            </div>
+
+            <div class="form-group">
+              <label for="authorBio">Biography</label>
+              <textarea id="authorBio" name="bio" [(ngModel)]="newAuthorForm.bio" class="premium-textarea" rows="5" placeholder="Enter brief details about the author..."></textarea>
+            </div>
+
+            <div class="slide-panel-footer">
+              <button type="button" class="btn-secondary" (click)="toggleAuthorPanel(false)">Cancel</button>
+              <button type="submit" class="btn-primary">Add Author</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+</div>
