@@ -78,6 +78,7 @@ body {
   letter-spacing: -0.5px;
   background: linear-gradient(90deg, #4f46e5, #9333ea);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   font-family: 'Roboto', sans-serif;
 }
