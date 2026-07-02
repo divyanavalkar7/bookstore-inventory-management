@@ -28,7 +28,7 @@
         <span class="author-stat-badge">
           {{ getAuthorBookCount(author.id) }} Published Book(s)
         </span>
-        <button mat-icon-button (click)="deleteAuthor(author.id)" class="action-btn delete" matTooltip="Remove Author">
+        <button mat-icon-button (click)="$event.stopPropagation(); deleteAuthor(author.id)" class="action-btn delete" matTooltip="Remove Author">
           <mat-icon style="font-size: 18px; width: 18px; height: 18px; line-height: 18px;">delete</mat-icon>
         </button>
       </div>

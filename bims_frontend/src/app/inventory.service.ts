@@ -164,8 +164,13 @@ export class InventoryService {
         await this.selectAuthor(currentSelected.id);
       }
     } catch (e: any) {
-      this.books.update(allBooks => allBooks.filter(book => book.isbn !== isbn));
-      this.errorMessage.set(`Could not delete book from backend (status ${e.status || 'unknown'}). Updated locally.`);
+      if (e.status === 0 || !e.status) {
+        this.books.update(allBooks => allBooks.filter(book => book.isbn !== isbn));
+        this.errorMessage.set('Backend server offline. Updated locally.');
+      } else {
+        const errMsg = e.error?.error?.message || e.error?.error || e.message || 'Server error';
+        this.errorMessage.set(`Could not delete book: ${errMsg}`);
+      }
     } finally {
       this.isLoading.set(false);
     }
@@ -178,9 +183,14 @@ export class InventoryService {
       await firstValueFrom(this.http.delete<void>(`${this.API_BASE}/authors/${authorId}`));
       await this.fetchBooksAndAuthors();
     } catch (e: any) {
-      this.authors.update(allAuthors => allAuthors.filter(a => a.id !== authorId));
-      this.books.update(allBooks => allBooks.filter(b => b.authorId !== authorId));
-      this.errorMessage.set(`Could not delete author from backend (status ${e.status || 'unknown'}). Updated locally.`);
+      if (e.status === 0 || !e.status) {
+        this.authors.update(allAuthors => allAuthors.filter(a => a.id !== authorId));
+        this.books.update(allBooks => allBooks.filter(b => b.authorId !== authorId));
+        this.errorMessage.set('Backend server offline. Updated locally.');
+      } else {
+        const errMsg = e.error?.error?.message || e.error?.error || e.message || 'Server error';
+        this.errorMessage.set(`Could not delete author: ${errMsg}`);
+      }
     } finally {
       this.isLoading.set(false);
     }
